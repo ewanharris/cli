@@ -5,7 +5,7 @@ type user
 
 type folder
   relations
-    define parent: [folder]
+    define parent: [folder with foo]
     define owner: [user]
     define parent_owner: owner from parent or parent_owner from parent
     define viewer: [user] or owner or parent_owner
@@ -22,3 +22,7 @@ type document
     define can_share: owner
     define can_write: owner or parent_owner
     define can_view: viewer or viewer from parent
+
+condition foo(current_timestamp: timestamp, grant_timestamp: timestamp, grant_duration: duration, user_ip: ipaddress, cidr: string) {
+    (current_timestamp < grant_timestamp + grant_duration) && user_ip.in_cidr(cidr)
+}

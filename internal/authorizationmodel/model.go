@@ -28,6 +28,7 @@ import (
 	pb "github.com/openfga/api/proto/openfga/v1"
 	openfga "github.com/openfga/go-sdk"
 	language "github.com/openfga/language/pkg/go/transformer"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/openfga/cli/internal/slices"
@@ -374,4 +375,47 @@ func (model *AuthzModel) DisplayAsDSL(fields []string) (*string, error) {
 	}
 
 	return &dslModel, nil
+}
+
+// DiffDSL converts to the DSL syntax and then runs the resulting text through the go-diff/diffmatchpatch
+// library before returning the resulting diff string.
+func (model *AuthzModel) DiffDSL(modelB *AuthzModel) (string, error) {
+	dslA, err := model.DisplayAsDSL([]string{"model"})
+	if err != nil {
+		return "", fmt.Errorf("failed to convert model to dsl %w", err)
+	}
+
+	dslB, err := modelB.DisplayAsDSL([]string{"model"})
+	if err != nil {
+		return "", fmt.Errorf("failed to convert model to dsl %w", err)
+	}
+
+	dmp := diffmatchpatch.New()
+	diffText := ""
+
+	diffs := dmp.DiffMain(*dslA, *dslB, false)
+
+	if len(diffs) == 1 {
+		return diffText, nil
+	}
+
+	// Cleanup the diffs to ensure the diff shown is as simple as possible. Not doing this
+	// can lead to some nonsensical output.
+	diffs = dmp.DiffCleanupSemantic(diffs)
+	diffs = dmp.DiffCleanupEfficiency(diffs)
+
+	for _, diff := range diffs {
+		text := diff.Text
+
+		switch diff.Type {
+		case diffmatchpatch.DiffInsert:
+			diffText += "\033[32m+" + text + "\033[0m"
+		case diffmatchpatch.DiffDelete:
+			diffText += "\033[31m-" + text + "\033[0m"
+		case diffmatchpatch.DiffEqual:
+			diffText += text
+		}
+	}
+
+	return diffText, nil
 }

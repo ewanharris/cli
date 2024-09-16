@@ -1,0 +1,17 @@
+[
+    {
+        "object": "folder:product",
+        "relation": "owner",
+        "user": "user:anne"
+    },
+    {
+        "object": "folder:product-2021",
+        "relation": "parent",
+        "user": "folder:product"
+    },
+    {
+        "object": "folder:product-2021",
+        "relation": "viewer",
+        "user": "user:beth"
+    }
+]

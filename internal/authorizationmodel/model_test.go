@@ -5,6 +5,8 @@ import (
 
 	openfga "github.com/openfga/go-sdk"
 	"github.com/openfga/openfga/pkg/typesystem"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/openfga/cli/internal/authorizationmodel"
 )
@@ -122,5 +124,89 @@ func TestDisplayAsJsonWithFields(t *testing.T) {
 
 	if jsonModel2.GetTypeDefinitions() != nil {
 		t.Errorf("Expected %v to equal nil", jsonModel2.GetTypeDefinitions())
+	}
+}
+
+func TestDiffDSL(t *testing.T) {
+	testcases := []struct {
+		_name  string
+		modelA string
+		modelB string
+		diff   string
+	}{
+		{
+			_name: "should provide no diff if equal",
+			modelA: `model
+schema 1.1
+
+type user`,
+			modelB: `model
+schema 1.1
+
+type user`,
+			diff: "",
+		},
+		{
+			_name: "should provide no diff if different order but equal",
+			modelA: `model
+schema 1.1
+
+type user
+type document
+  relations 
+    define owner: [user]`,
+			modelB: `model
+schema 1.1
+
+type user
+type document
+  relations 
+    define owner: [user]`,
+			diff: "",
+		},
+		{
+			_name: "should provide diff when different",
+			modelA: `model
+schema 1.1
+
+type user`,
+			modelB: `model
+schema 1.1
+
+type user
+type document
+  relations
+    define owner: [user]`,
+			diff: `model
+  schema 1.1
+
+type user
+
+\033[32m+type document
+  relations
+    define owner: [user]
+
+\033[0m`,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc._name, func(t *testing.T) {
+			modelA := &authorizationmodel.AuthzModel{}
+
+			err := modelA.ReadFromDSLString(tc.modelA)
+			require.NoError(t, err)
+
+			modelB := &authorizationmodel.AuthzModel{}
+
+			err = modelB.ReadFromDSLString(tc.modelB)
+			require.NoError(t, err)
+
+			diff, err := modelA.DiffDSL(modelB)
+
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.diff, diff)
+		})
 	}
 }

@@ -45,6 +45,10 @@ linters-settings:
           - google.golang.org/protobuf/encoding/protojson
           - google.golang.org/protobuf/types/known/structpb
           - gopkg.in/yaml.v3
+          - github.com/hashicorp/go-multierror
+          - github.com/gocarina/gocsv
+          - github.com/schollz/progressbar/v3
+          - github.com/sergi/go-diff/diffmatchpatch
       test:
         files:
           - "$test"
